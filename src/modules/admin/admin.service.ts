@@ -33,15 +33,16 @@ export class AdminService {
 
   async getStaff() {
     const users = await this.userRepository.find({
-      relations: ['userRoles'],
+      relations: ['profile', 'userRoles'],
       order: { createdAt: 'DESC' },
     });
 
     return users.map((user) => ({
       user_id: user.id,
-      display_name: user.displayName,
-      phone: user.phone,
-      avatar_url: user.avatarUrl,
+      email: user.email,
+      display_name: user.profile?.displayName ?? '',
+      phone: user.profile?.phone ?? null,
+      avatar_url: user.profile?.avatarUrl ?? null,
       created_at: user.createdAt,
       roles: user.userRoles.map((ur) => ur.role),
     }));
