@@ -25,7 +25,7 @@ export class Reservation {
   @Column({ name: 'customer_name' })
   customerName: string;
 
-  @Column({ name: 'customer_phone', nullable: true })
+  @Column({ name: 'customer_phone', type: 'varchar', nullable: true })
   customerPhone: string | null;
 
   @Column({ name: 'party_size' })
@@ -35,22 +35,24 @@ export class Reservation {
   reservationTime: Date;
 
   @Column({
-    type: 'enum',
-    enum: ReservationStatus,
+    type: 'text',
     default: ReservationStatus.PENDING,
   })
   status: ReservationStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @Column({ name: 'table_id', nullable: true })
+  @Column({ name: 'table_id', type: 'uuid', nullable: true })
   tableId: string | null;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  createdBy: string | null;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
   @ManyToOne(() => RestaurantTable, { nullable: true })

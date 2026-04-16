@@ -10,30 +10,26 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { TableStatus } from '../common/enums/index.js';
 
-@Entity('tables')
+@Entity('restaurant_tables')
 export class RestaurantTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'table_number', unique: true })
+  @Column({ name: 'table_number' })
   tableNumber: number;
 
   @Column()
   capacity: number;
 
-  @Column({ type: 'enum', enum: TableStatus, default: TableStatus.AVAILABLE })
+  @Column({ type: 'text', default: TableStatus.AVAILABLE })
   status: TableStatus;
 
   @Column({ name: 'location_zone', default: 'main' })
   locationZone: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
 }

@@ -51,13 +51,15 @@ export class ReservationsService {
     }));
   }
 
-  async create(dto: CreateReservationDto) {
+  async create(dto: CreateReservationDto, userId?: string) {
     const reservation = this.reservationRepository.create({
+      tableId: dto.table_id || null,
       customerName: dto.customer_name,
       customerPhone: dto.customer_phone || null,
       partySize: dto.party_size,
       reservationTime: new Date(dto.reservation_time),
       notes: dto.notes || null,
+      createdBy: userId || null,
     });
 
     const saved = await this.reservationRepository.save(reservation);

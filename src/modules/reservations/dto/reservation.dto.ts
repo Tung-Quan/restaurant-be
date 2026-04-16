@@ -12,6 +12,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
 } from 'class-validator';
 import { ReservationStatus } from '../../../common/enums/index.js';
@@ -35,6 +36,10 @@ export class CreateReservationDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsUUID()
+  @IsOptional()
+  table_id?: string;
 }
 
 export class UpdateReservationStatusDto {

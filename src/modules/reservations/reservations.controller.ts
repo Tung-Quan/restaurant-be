@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { Role } from '../../common/enums/index.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 
 @Controller('reservations')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -38,8 +39,11 @@ export class ReservationsController {
 
   @Post()
   @Roles(Role.ADMIN, Role.MANAGER, Role.SERVER, Role.HOST)
-  create(@Body() dto: CreateReservationDto) {
-    return this.reservationsService.create(dto);
+  create(
+    @Body() dto: CreateReservationDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.reservationsService.create(dto, userId);
   }
 
   @Patch(':id/status')

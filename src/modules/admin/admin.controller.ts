@@ -127,7 +127,7 @@ export class AdminController {
     await this.activityLogService.log(
       userId,
       'CREATE_TABLE',
-      'tables',
+      'restaurant_tables',
       table.id,
     );
     return table;
