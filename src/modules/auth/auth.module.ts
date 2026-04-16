@@ -17,11 +17,12 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { User } from '../../entities/user.entity.js';
+import { Profile } from '../../entities/profile.entity.js';
 import { UserRole } from '../../entities/user-role.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserRole]),
+    TypeOrmModule.forFeature([User, Profile, UserRole]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -29,7 +30,7 @@ import { UserRole } from '../../entities/user-role.entity.js';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET', 'default-secret'),
         signOptions: {
-          expiresIn: configService.get<number>('JWT_EXPIRATION', 3600),
+          expiresIn: configService.get<string>('JWT_EXPIRATION', '1h') as never,
         },
       }),
     }),

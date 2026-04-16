@@ -19,6 +19,7 @@ import { User } from '../../../entities/user.entity.js';
 interface JwtPayload {
   sub: string;
   email: string;
+  role?: string;
 }
 
 @Injectable()
@@ -38,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.userRepository.findOne({
       where: { id: payload.sub },
-      relations: ['userRoles'],
+      relations: ['profile', 'userRoles'],
     });
 
     if (!user) {
@@ -47,8 +48,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     return {
       id: user.id,
-      email: user.email,
-      displayName: user.displayName,
+      email: user.email ?? payload.email ?? null,
+      displayName: user.profile?.displayName ?? '',
       roles: user.userRoles.map((ur) => ur.role),
     };
   }
