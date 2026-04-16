@@ -24,7 +24,7 @@ export class MenuItem {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   description: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
@@ -33,7 +33,7 @@ export class MenuItem {
   @Column({ name: 'category_id' })
   categoryId: string;
 
-  @Column({ name: 'image_url', nullable: true })
+  @Column({ name: 'image_url', type: 'varchar', nullable: true })
   imageUrl: string | null;
 
   @Column({ name: 'is_available', default: true })
@@ -42,10 +42,13 @@ export class MenuItem {
   @Column({ name: 'prep_time_minutes', default: 15 })
   prepTimeMinutes: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @Column({ type: 'text', array: true, nullable: true })
+  allergens: string[] | null;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
   @ManyToOne(() => MenuCategory, (cat) => cat.items)

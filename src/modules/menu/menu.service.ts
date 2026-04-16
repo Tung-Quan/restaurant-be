@@ -61,6 +61,7 @@ export class MenuService {
       imageUrl: dto.image_url || null,
       isAvailable: dto.is_available ?? true,
       prepTimeMinutes: dto.prep_time_minutes ?? 15,
+      allergens: dto.allergens ?? null,
     });
 
     return this.menuItemRepository.save(item);

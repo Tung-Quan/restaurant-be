@@ -6,6 +6,7 @@
  */
 
 import {
+  IsArray,
   IsBoolean,
   IsNotEmpty,
   IsNumber,
@@ -42,6 +43,11 @@ export class CreateMenuItemDto {
   @IsNumber()
   @IsOptional()
   prep_time_minutes?: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allergens?: string[];
 }
 
 export class UpdateMenuItemAvailabilityDto {
