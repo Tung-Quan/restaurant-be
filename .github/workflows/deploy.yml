@@ -49,6 +49,36 @@ jobs:
             ecosystem.config.cjs \
             scripts/deploy
 
+      - name: Validate deploy secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_TMP_PATH: ${{ secrets.DEPLOY_TMP_PATH }}
+          DEPLOY_APP_PATH: ${{ secrets.DEPLOY_APP_PATH }}
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          missing=0
+
+          for secret_name in \
+            DEPLOY_HOST \
+            DEPLOY_USER \
+            DEPLOY_SSH_KEY \
+            DEPLOY_PORT \
+            DEPLOY_TMP_PATH \
+            DEPLOY_APP_PATH \
+            HEALTHCHECK_URL; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error title=Missing deploy secret::${secret_name} is not set in the production environment secrets."
+              missing=1
+            fi
+          done
+
+          if [ "${missing}" -ne 0 ]; then
+            exit 1
+          fi
+
       - name: Prepare remote temporary directory
         uses: appleboy/ssh-action@v1.0.3
         with:
