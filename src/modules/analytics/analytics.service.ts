@@ -62,11 +62,11 @@ export class AnalyticsService {
 
     const results = await this.orderRepository
       .createQueryBuilder('order')
-      .select("DATE(order.paidAt)", 'date')
+      .select('DATE(order.paidAt)', 'date')
       .addSelect('COALESCE(SUM(order.totalAmount), 0)', 'revenue')
       .where('order.paymentStatus = :status', { status: PaymentStatus.PAID })
       .andWhere('order.paidAt >= :startDate', { startDate })
-      .groupBy("DATE(order.paidAt)")
+      .groupBy('DATE(order.paidAt)')
       .orderBy('date', 'ASC')
       .getRawMany();
 

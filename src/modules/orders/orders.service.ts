@@ -81,8 +81,7 @@ export class OrdersService {
   }
 
   async create(dto: CreateOrderDto, serverId?: string) {
-    const taxRate =
-      this.configService.get<number>('TAX_RATE', 10) / 100;
+    const taxRate = this.configService.get<number>('TAX_RATE', 10) / 100;
 
     const subtotal = dto.items.reduce(
       (sum, item) => sum + item.unit_price * item.quantity,

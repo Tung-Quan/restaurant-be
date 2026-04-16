@@ -20,10 +20,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Order } from '../../entities/order.entity.js';
-import {
-  OrderStatus,
-  PaymentStatus,
-} from '../../common/enums/index.js';
+import { OrderStatus, PaymentStatus } from '../../common/enums/index.js';
 import { CreatePaymentDto } from './dto/billing.dto.js';
 
 @Injectable()
@@ -98,8 +95,8 @@ export class BillingService {
       .select('COALESCE(SUM(order.totalAmount), 0)', 'revenue')
       .where('order.paymentStatus = :status', { status: PaymentStatus.PAID })
       .andWhere('order.updatedAt >= :today', { today })
-      .getRawOne();
+      .getRawOne<{ revenue: string }>();
 
-    return parseFloat(result?.revenue || '0');
+    return parseFloat(result?.revenue ?? '0');
   }
 }

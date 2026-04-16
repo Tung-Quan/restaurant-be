@@ -10,7 +10,7 @@
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InventoryItem } from '../../entities/inventory-item.entity.js';
 import {
   CreateInventoryItemDto,

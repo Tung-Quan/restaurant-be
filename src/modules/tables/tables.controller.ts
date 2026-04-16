@@ -37,10 +37,7 @@ export class TablesController {
 
   @Patch(':id/status')
   @Roles(Role.ADMIN, Role.MANAGER, Role.SERVER, Role.HOST)
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateTableStatusDto,
-  ) {
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateTableStatusDto) {
     return this.tablesService.updateStatus(id, dto);
   }
 }

@@ -100,8 +100,7 @@ export class KitchenService {
       order.status = OrderStatus.READY;
     } else if (
       itemStatuses.some(
-        (s) =>
-          s === OrderItemStatus.COOKING || s === OrderItemStatus.PREPARING,
+        (s) => s === OrderItemStatus.COOKING || s === OrderItemStatus.PREPARING,
       )
     ) {
       order.status = OrderStatus.IN_PROGRESS;

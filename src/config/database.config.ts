@@ -15,7 +15,10 @@ const getDatabaseUrl = (configService: ConfigService): string | undefined =>
   configService.get<string>('DATABASE_URL') ||
   configService.get<string>('SUPABASE_DB_URL');
 
-const shouldUseSsl = (configService: ConfigService, databaseUrl?: string): boolean => {
+const shouldUseSsl = (
+  configService: ConfigService,
+  databaseUrl?: string,
+): boolean => {
   const sslEnv = configService.get<string>('DB_SSL');
 
   if (sslEnv !== undefined) {

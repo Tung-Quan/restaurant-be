@@ -20,18 +20,24 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiResponse } from '../interfaces/api-response.interface.js';
 
+const hasApiResponseShape = <T>(
+  data: T | ApiResponse<T>,
+): data is ApiResponse<T> =>
+  typeof data === 'object' && data !== null && 'success' in data;
+
 @Injectable()
-export class TransformResponseInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>>
-{
+export class TransformResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ApiResponse<T>
+> {
   intercept(
     context: ExecutionContext,
-    next: CallHandler,
+    next: CallHandler<T>,
   ): Observable<ApiResponse<T>> {
     return next.handle().pipe(
-      map((data) => {
+      map((data: T | ApiResponse<T>) => {
         // If the data already has 'success' property, pass through (e.g., paginated responses)
-        if (data && typeof data === 'object' && 'success' in data) {
+        if (hasApiResponseShape(data)) {
           return data;
         }
         return {

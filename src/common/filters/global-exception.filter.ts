@@ -28,7 +28,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code = 'INTERNAL_ERROR';
     let message = 'An unexpected error occurred';
-    let details: Record<string, any> | undefined;
+    let details: Record<string, unknown> | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -37,9 +37,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object') {
-        const res = exceptionResponse as Record<string, any>;
-        message = res.message || exception.message;
-        code = res.code || this.getErrorCode(status);
+        const res = exceptionResponse as {
+          message?: string | string[];
+          code?: string;
+          details?: Record<string, unknown>;
+        };
+        message =
+          typeof res.message === 'string' ? res.message : exception.message;
+        code = res.code ?? this.getErrorCode(status);
         details = res.details;
 
         // Handle class-validator errors

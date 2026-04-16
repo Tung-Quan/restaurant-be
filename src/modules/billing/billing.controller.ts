@@ -37,10 +37,7 @@ export class BillingController {
 
   @Post('orders/:id/payments')
   @Roles(Role.ADMIN, Role.MANAGER, Role.CASHIER)
-  processPayment(
-    @Param('id') orderId: string,
-    @Body() dto: CreatePaymentDto,
-  ) {
+  processPayment(@Param('id') orderId: string, @Body() dto: CreatePaymentDto) {
     return this.billingService.processPayment(orderId, dto);
   }
 }

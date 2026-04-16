@@ -39,10 +39,7 @@ export class ReservationsController {
 
   @Post()
   @Roles(Role.ADMIN, Role.MANAGER, Role.SERVER, Role.HOST)
-  create(
-    @Body() dto: CreateReservationDto,
-    @CurrentUser('id') userId: string,
-  ) {
+  create(@Body() dto: CreateReservationDto, @CurrentUser('id') userId: string) {
     return this.reservationsService.create(dto, userId);
   }
 

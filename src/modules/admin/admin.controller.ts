@@ -176,8 +176,6 @@ export class AdminController {
   // --- Activity Logs ---
   @Get('activity-logs')
   getActivityLogs(@Query('limit') limit?: string) {
-    return this.activityLogService.findAll(
-      limit ? parseInt(limit, 10) : 50,
-    );
+    return this.activityLogService.findAll(limit ? parseInt(limit, 10) : 50);
   }
 }

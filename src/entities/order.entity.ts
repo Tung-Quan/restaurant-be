@@ -53,7 +53,13 @@ export class Order {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   discount: number;
 
-  @Column({ name: 'total_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({
+    name: 'total_amount',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
   totalAmount: number;
 
   @Column({

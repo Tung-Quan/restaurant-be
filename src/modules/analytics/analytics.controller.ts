@@ -26,16 +26,12 @@ export class AnalyticsController {
   @Get('top-items')
   @Roles(Role.ADMIN, Role.MANAGER)
   getTopItems(@Query('limit') limit?: string) {
-    return this.analyticsService.getTopItems(
-      limit ? parseInt(limit, 10) : 10,
-    );
+    return this.analyticsService.getTopItems(limit ? parseInt(limit, 10) : 10);
   }
 
   @Get('daily-revenue')
   @Roles(Role.ADMIN, Role.MANAGER)
   getDailyRevenue(@Query('days') days?: string) {
-    return this.analyticsService.getDailyRevenue(
-      days ? parseInt(days, 10) : 7,
-    );
+    return this.analyticsService.getDailyRevenue(days ? parseInt(days, 10) : 7);
   }
 }

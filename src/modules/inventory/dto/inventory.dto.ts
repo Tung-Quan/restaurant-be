@@ -5,7 +5,13 @@
  * - Each DTO validates one specific request shape.
  */
 
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateInventoryItemDto {
   @IsString()

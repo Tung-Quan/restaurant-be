@@ -13,6 +13,12 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
 import { Role } from '../enums/index.js';
 
+type RequestWithUserRoles = {
+  user?: {
+    roles?: Role[];
+  };
+};
+
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -27,11 +33,12 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest<RequestWithUserRoles>();
     if (!user || !user.roles) {
       return false;
     }
 
-    return requiredRoles.some((role) => user.roles.includes(role));
+    const userRoles = user.roles;
+    return requiredRoles.some((role) => userRoles.includes(role));
   }
 }
