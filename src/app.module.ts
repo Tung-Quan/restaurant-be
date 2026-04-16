@@ -17,6 +17,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from './config/database.config.js';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
+import { DatabaseBootstrapService } from './database-bootstrap.service.js';
 
 // Feature modules
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -32,6 +35,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 
 @Module({
+  controllers: [AppController],
   imports: [
     // Global configuration
     ConfigModule.forRoot({
@@ -59,5 +63,6 @@ import { AdminModule } from './modules/admin/admin.module.js';
     AnalyticsModule,
     AdminModule,
   ],
+  providers: [AppService, DatabaseBootstrapService],
 })
 export class AppModule {}
