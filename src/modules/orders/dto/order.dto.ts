@@ -6,6 +6,7 @@
  */
 
 import {
+  IsObject,
   IsArray,
   IsNotEmpty,
   IsNumber,
@@ -32,6 +33,10 @@ export class CreateOrderItemDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsObject()
+  @IsOptional()
+  customizations?: Record<string, unknown>;
 }
 
 export class CreateOrderDto {
@@ -42,6 +47,10 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   special_instructions?: string;
+
+  @IsString()
+  @IsOptional()
+  order_type?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

@@ -10,7 +10,6 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
@@ -36,20 +35,19 @@ export class OrderItem {
   unitPrice: number;
 
   @Column({
-    type: 'enum',
-    enum: OrderItemStatus,
+    type: 'text',
     default: OrderItemStatus.PENDING,
   })
   status: OrderItemStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  @Column({ type: 'jsonb', nullable: true })
+  customizations: Record<string, unknown> | null;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
 
   @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })

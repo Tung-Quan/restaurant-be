@@ -76,7 +76,7 @@ export class KitchenService {
     return {
       id: savedItem.id,
       status: savedItem.status,
-      updated_at: savedItem.updatedAt,
+      updated_at: new Date(),
     };
   }
 

@@ -94,6 +94,7 @@ export class OrdersService {
     const order = this.orderRepository.create({
       tableId: dto.table_id,
       serverId: serverId || null,
+      orderType: dto.order_type || 'dine_in',
       specialInstructions: dto.special_instructions || null,
       subtotal,
       tax,
@@ -106,6 +107,7 @@ export class OrdersService {
           quantity: item.quantity,
           unitPrice: item.unit_price,
           notes: item.notes || null,
+          customizations: item.customizations || null,
         }),
       ),
     });
@@ -155,6 +157,7 @@ export class OrdersService {
       id: order.id,
       table_id: order.tableId,
       server_id: order.serverId,
+      order_type: order.orderType,
       status: order.status,
       special_instructions: order.specialInstructions,
       subtotal: Number(order.subtotal),
@@ -172,6 +175,7 @@ export class OrdersService {
         unit_price: Number(item.unitPrice),
         status: item.status,
         notes: item.notes,
+        customizations: item.customizations,
       })),
     };
   }

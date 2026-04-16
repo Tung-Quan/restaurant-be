@@ -77,7 +77,6 @@ export class BillingService {
     order.paymentStatus = PaymentStatus.PAID;
     order.paymentMethod = dto.method;
     order.status = OrderStatus.COMPLETED;
-    order.paidAt = new Date();
 
     await this.orderRepository.save(order);
 
@@ -86,7 +85,7 @@ export class BillingService {
       payment_status: order.paymentStatus,
       payment_method: order.paymentMethod,
       status: order.status,
-      paid_at: order.paidAt,
+      paid_at: order.updatedAt,
     };
   }
 
@@ -98,7 +97,7 @@ export class BillingService {
       .createQueryBuilder('order')
       .select('COALESCE(SUM(order.totalAmount), 0)', 'revenue')
       .where('order.paymentStatus = :status', { status: PaymentStatus.PAID })
-      .andWhere('order.paidAt >= :today', { today })
+      .andWhere('order.updatedAt >= :today', { today })
       .getRawOne();
 
     return parseFloat(result?.revenue || '0');

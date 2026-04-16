@@ -32,13 +32,16 @@ export class Order {
   @Column({ name: 'table_id' })
   tableId: string;
 
-  @Column({ name: 'server_id', nullable: true })
+  @Column({ name: 'server_id', type: 'uuid', nullable: true })
   serverId: string | null;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
+  @Column({ name: 'order_type', type: 'text', default: 'dine_in' })
+  orderType: string;
+
+  @Column({ type: 'text', default: OrderStatus.PENDING })
   status: OrderStatus;
 
-  @Column({ name: 'special_instructions', nullable: true })
+  @Column({ name: 'special_instructions', type: 'text', nullable: true })
   specialInstructions: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
@@ -55,27 +58,22 @@ export class Order {
 
   @Column({
     name: 'payment_status',
-    type: 'enum',
-    enum: PaymentStatus,
+    type: 'text',
     default: PaymentStatus.UNPAID,
   })
   paymentStatus: PaymentStatus;
 
   @Column({
     name: 'payment_method',
-    type: 'enum',
-    enum: PaymentMethod,
+    type: 'text',
     nullable: true,
   })
   paymentMethod: PaymentMethod | null;
 
-  @Column({ name: 'paid_at', nullable: true })
-  paidAt: Date | null;
-
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
