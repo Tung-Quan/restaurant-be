@@ -11,7 +11,6 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity.js';
 import { Role } from '../common/enums/index.js';
@@ -24,11 +23,8 @@ export class UserRole {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ type: 'enum', enum: Role })
+  @Column({ type: 'enum', enum: Role, enumName: 'app_role' })
   role: Role;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.userRoles, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

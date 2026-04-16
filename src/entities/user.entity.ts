@@ -1,10 +1,3 @@
-/**
- * User Entity.
- *
- * SOLID: Single Responsibility Principle (SRP)
- * - Represents only the user data structure and its database mapping.
- */
-
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -12,34 +5,30 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { UserRole } from './user-role.entity.js';
+import { Profile } from './profile.entity.js';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'text', unique: true })
   email: string;
 
-  @Column()
+  @Column({ type: 'text' })
   password: string;
 
-  @Column({ name: 'display_name' })
-  displayName: string;
-
-  @Column({ nullable: true })
-  phone: string | null;
-
-  @Column({ name: 'avatar_url', nullable: true })
-  avatarUrl: string | null;
-
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  @OneToOne(() => Profile, (profile) => profile.user, { eager: true })
+  profile: Profile | null;
 
   @OneToMany(() => UserRole, (userRole) => userRole.user, { eager: true })
   userRoles: UserRole[];

@@ -1,4 +1,5 @@
 export { User } from './user.entity.js';
+export { Profile } from './profile.entity.js';
 export { UserRole } from './user-role.entity.js';
 export { RestaurantTable } from './table.entity.js';
 export { MenuCategory } from './menu-category.entity.js';
