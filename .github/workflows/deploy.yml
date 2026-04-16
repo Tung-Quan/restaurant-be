@@ -112,10 +112,3 @@ jobs:
             cat app.log
           fi
           exit 1
-
-      - name: Stop backend
-        if: always()
-        run: |
-          if [ -f app.pid ]; then
-            kill "$(cat app.pid)" || true
-          fi
