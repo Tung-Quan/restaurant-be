@@ -34,6 +34,18 @@ export class TransformResponseInterceptor<T> implements NestInterceptor<
     context: ExecutionContext,
     next: CallHandler<T>,
   ): Observable<ApiResponse<T>> {
+    const request = context.switchToHttp().getRequest<{
+      headers?: Record<string, string | string[] | undefined>;
+    }>();
+    const acceptHeader = request.headers?.accept;
+    const acceptsEventStream = Array.isArray(acceptHeader)
+      ? acceptHeader.some((value) => value.includes('text/event-stream'))
+      : acceptHeader?.includes('text/event-stream');
+
+    if (acceptsEventStream) {
+      return next.handle() as Observable<ApiResponse<T>>;
+    }
+
     return next.handle().pipe(
       map((data: T | ApiResponse<T>) => {
         // If the data already has 'success' property, pass through (e.g., paginated responses)

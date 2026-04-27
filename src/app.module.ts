@@ -20,6 +20,7 @@ import { getDatabaseConfig } from './config/database.config.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseBootstrapService } from './database-bootstrap.service.js';
+import { EventsModule } from './common/events/index.js';
 
 // Feature modules
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -51,6 +52,7 @@ import { AdminModule } from './modules/admin/admin.module.js';
     }),
 
     // Feature modules
+    EventsModule,
     AuthModule,
     TablesModule,
     MenuModule,

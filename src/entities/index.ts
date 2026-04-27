@@ -9,3 +9,4 @@ export { OrderItem } from './order-item.entity.js';
 export { Reservation } from './reservation.entity.js';
 export { InventoryItem } from './inventory-item.entity.js';
 export { ActivityLog } from './activity-log.entity.js';
+export { OutboxEvent, OutboxEventStatus } from './outbox-event.entity.js';
