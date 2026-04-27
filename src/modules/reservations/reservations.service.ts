@@ -8,10 +8,11 @@
  * - Depends on Repository abstractions.
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { Reservation } from '../../entities/reservation.entity.js';
+import { ReservationStatus } from '../../common/enums/index.js';
 import {
   CreateReservationDto,
   UpdateReservationStatusDto,
@@ -19,6 +20,8 @@ import {
 
 @Injectable()
 export class ReservationsService {
+  private static readonly OVERLAP_WINDOW_MINUTES = 120;
+
   constructor(
     @InjectRepository(Reservation)
     private readonly reservationRepository: Repository<Reservation>,
@@ -52,12 +55,17 @@ export class ReservationsService {
   }
 
   async create(dto: CreateReservationDto, userId?: string) {
+    const reservationTime = new Date(dto.reservation_time);
+    if (dto.table_id) {
+      await this.assertTableAvailable(dto.table_id, reservationTime);
+    }
+
     const reservation = this.reservationRepository.create({
       tableId: dto.table_id || null,
       customerName: dto.customer_name,
       customerPhone: dto.customer_phone || null,
       partySize: dto.party_size,
-      reservationTime: new Date(dto.reservation_time),
+      reservationTime,
       notes: dto.notes || null,
       createdBy: userId || null,
     });
@@ -99,5 +107,41 @@ export class ReservationsService {
         reservationTime: Between(today, tomorrow),
       },
     });
+  }
+
+  private async assertTableAvailable(
+    tableId: string,
+    reservationTime: Date,
+  ): Promise<void> {
+    const windowStart = new Date(reservationTime);
+    windowStart.setMinutes(
+      windowStart.getMinutes() - ReservationsService.OVERLAP_WINDOW_MINUTES,
+    );
+    const windowEnd = new Date(reservationTime);
+    windowEnd.setMinutes(
+      windowEnd.getMinutes() + ReservationsService.OVERLAP_WINDOW_MINUTES,
+    );
+
+    const existing = await this.reservationRepository
+      .createQueryBuilder('reservation')
+      .where('reservation.tableId = :tableId', { tableId })
+      .andWhere('reservation.reservationTime BETWEEN :start AND :end', {
+        start: windowStart,
+        end: windowEnd,
+      })
+      .andWhere('reservation.status IN (:...statuses)', {
+        statuses: [
+          ReservationStatus.PENDING,
+          ReservationStatus.CONFIRMED,
+          ReservationStatus.SEATED,
+        ],
+      })
+      .getOne();
+
+    if (existing) {
+      throw new BadRequestException(
+        'Table already has an active reservation near this time',
+      );
+    }
   }
 }
