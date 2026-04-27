@@ -11,12 +11,14 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsEnum,
   IsString,
   IsUUID,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { OrderStatus } from '../../../common/enums/index.js';
 
 export class CreateOrderItemDto {
   @IsUUID()
@@ -28,7 +30,8 @@ export class CreateOrderItemDto {
 
   @IsNumber()
   @Min(0)
-  unit_price: number;
+  @IsOptional()
+  unit_price?: number;
 
   @IsString()
   @IsOptional()
@@ -56,4 +59,10 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
+}
+
+export class UpdateOrderStatusDto {
+  @IsEnum(OrderStatus)
+  @IsNotEmpty()
+  status: OrderStatus;
 }

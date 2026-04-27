@@ -8,9 +8,18 @@
  * - Depends on OrdersService abstraction.
  */
 
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service.js';
-import { CreateOrderDto } from './dto/order.dto.js';
+import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -42,5 +51,17 @@ export class OrdersController {
   @Roles(Role.ADMIN, Role.MANAGER, Role.SERVER)
   create(@Body() dto: CreateOrderDto, @CurrentUser('id') userId: string) {
     return this.ordersService.create(dto, userId);
+  }
+
+  @Patch(':id/status')
+  @Roles(Role.ADMIN, Role.MANAGER, Role.SERVER, Role.CASHIER)
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+    return this.ordersService.updateStatus(id, dto.status);
+  }
+
+  @Patch(':id/cancel')
+  @Roles(Role.ADMIN, Role.MANAGER, Role.SERVER)
+  cancel(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.ordersService.cancel(id, userId);
   }
 }

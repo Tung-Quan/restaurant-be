@@ -12,14 +12,23 @@
  *   introduced via a TaxCalculator interface without modifying this service.
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Order } from '../../entities/order.entity.js';
 import { OrderItem } from '../../entities/order-item.entity.js';
+import { MenuItem } from '../../entities/menu-item.entity.js';
 import { OrderStatus, PaymentStatus } from '../../common/enums/index.js';
 import { CreateOrderDto } from './dto/order.dto.js';
+import {
+  InternalEventBusService,
+  INTERNAL_EVENTS,
+  OrderCreatedForKdsEvent,
+  OrderStatusUpdatedEvent,
+  OutboxEventService,
+} from '../../common/events/index.js';
+import { ActivityLogService } from '../admin/activity-log.service.js';
 
 @Injectable()
 export class OrdersService {
@@ -28,7 +37,13 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
+    @InjectRepository(MenuItem)
+    private readonly menuItemRepository: Repository<MenuItem>,
+    private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
+    private readonly eventBus: InternalEventBusService,
+    private readonly outboxEventService: OutboxEventService,
+    private readonly activityLogService: ActivityLogService,
   ) {}
 
   async findAll(query: {
@@ -47,6 +62,9 @@ export class OrdersService {
         if (includes.includes('items.menu_item')) {
           qb.leftJoinAndSelect('items.menuItem', 'menuItem');
         }
+      }
+      if (includes.includes('table')) {
+        qb.leftJoinAndSelect('order.table', 'table');
       }
     }
 
@@ -82,36 +100,79 @@ export class OrdersService {
 
   async create(dto: CreateOrderDto, serverId?: string) {
     const taxRate = this.configService.get<number>('TAX_RATE', 10) / 100;
+    const menuItemIds = dto.items.map((item) => item.menu_item_id);
+    const menuItems = await this.menuItemRepository.find({
+      where: { id: In(menuItemIds) },
+    });
+    const menuItemById = new Map(menuItems.map((item) => [item.id, item]));
+
+    for (const requestedItem of dto.items) {
+      const menuItem = menuItemById.get(requestedItem.menu_item_id);
+      if (!menuItem) {
+        throw new BadRequestException(
+          `Menu item ${requestedItem.menu_item_id} was not found`,
+        );
+      }
+      if (!menuItem.isAvailable) {
+        throw new BadRequestException(`${menuItem.name} is currently unavailable`);
+      }
+    }
 
     const subtotal = dto.items.reduce(
-      (sum, item) => sum + item.unit_price * item.quantity,
+      (sum, item) =>
+        sum + Number(menuItemById.get(item.menu_item_id)?.price ?? 0) * item.quantity,
       0,
     );
     const tax = Math.round(subtotal * taxRate * 100) / 100;
     const totalAmount = subtotal + tax;
 
-    const order = this.orderRepository.create({
-      tableId: dto.table_id,
-      serverId: serverId || null,
-      orderType: dto.order_type || 'dine_in',
-      specialInstructions: dto.special_instructions || null,
-      subtotal,
-      tax,
-      totalAmount,
-      status: OrderStatus.PENDING,
-      paymentStatus: PaymentStatus.UNPAID,
-      items: dto.items.map((item) =>
-        this.orderItemRepository.create({
-          menuItemId: item.menu_item_id,
-          quantity: item.quantity,
-          unitPrice: item.unit_price,
-          notes: item.notes || null,
-          customizations: item.customizations || null,
-        }),
-      ),
-    });
+    const { savedOrder, outboxEventId } = await this.dataSource.transaction(
+      async (manager) => {
+        const order = manager.create(Order, {
+          tableId: dto.table_id,
+          serverId: serverId || null,
+          orderType: dto.order_type || 'dine_in',
+          specialInstructions: dto.special_instructions || null,
+          subtotal,
+          tax,
+          totalAmount,
+          status: OrderStatus.PENDING,
+          paymentStatus: PaymentStatus.UNPAID,
+          items: dto.items.map((item) =>
+            manager.create(OrderItem, {
+              menuItemId: item.menu_item_id,
+              quantity: item.quantity,
+              unitPrice: Number(menuItemById.get(item.menu_item_id)?.price ?? 0),
+              notes: item.notes || null,
+              customizations: item.customizations || null,
+            }),
+          ),
+        });
 
-    const savedOrder = await this.orderRepository.save(order);
+        const nextSavedOrder = await manager.save(Order, order);
+        const eventPayload: OrderCreatedForKdsEvent = {
+          order_id: nextSavedOrder.id,
+          table_id: nextSavedOrder.tableId,
+          server_id: nextSavedOrder.serverId,
+          created_at: nextSavedOrder.createdAt,
+          items: nextSavedOrder.items.map((item) => ({
+            order_item_id: item.id,
+            menu_item_id: item.menuItemId,
+            quantity: item.quantity,
+            notes: item.notes,
+          })),
+        };
+        const outboxEvent = await this.outboxEventService.createPending(
+          manager,
+          INTERNAL_EVENTS.ORDER_CREATED_FOR_KDS,
+          eventPayload as unknown as Record<string, unknown>,
+        );
+
+        return { savedOrder: nextSavedOrder, outboxEventId: outboxEvent.id };
+      },
+    );
+
+    await this.outboxEventService.publishById(outboxEventId);
 
     return {
       id: savedOrder.id,
@@ -131,6 +192,76 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
     return order;
+  }
+
+  async updateStatus(id: string, status: OrderStatus) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    order.status = status;
+    const savedOrder = await this.orderRepository.save(order);
+
+    const eventPayload: OrderStatusUpdatedEvent = {
+      order_id: savedOrder.id,
+      status: savedOrder.status,
+      updated_at: savedOrder.updatedAt,
+    };
+    await this.outboxEventService.recordAndPublish(
+      INTERNAL_EVENTS.ORDER_STATUS_UPDATED,
+      eventPayload as unknown as Record<string, unknown>,
+    );
+
+    return {
+      id: savedOrder.id,
+      status: savedOrder.status,
+      payment_status: savedOrder.paymentStatus,
+      updated_at: savedOrder.updatedAt,
+    };
+  }
+
+  async cancel(id: string, userId?: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      throw new BadRequestException('Paid orders cannot be cancelled');
+    }
+
+    if ([OrderStatus.COMPLETED, OrderStatus.CANCELLED].includes(order.status)) {
+      throw new BadRequestException(`Order is already ${order.status}`);
+    }
+
+    order.status = OrderStatus.CANCELLED;
+    const savedOrder = await this.orderRepository.save(order);
+
+    const eventPayload: OrderStatusUpdatedEvent = {
+      order_id: savedOrder.id,
+      status: savedOrder.status,
+      updated_at: savedOrder.updatedAt,
+    };
+    await this.outboxEventService.recordAndPublish(
+      INTERNAL_EVENTS.ORDER_STATUS_UPDATED,
+      eventPayload as unknown as Record<string, unknown>,
+    );
+
+    await this.activityLogService.log(
+      userId ?? '',
+      'CANCEL_ORDER',
+      'orders',
+      savedOrder.id,
+      { status: savedOrder.status },
+    );
+
+    return {
+      id: savedOrder.id,
+      status: savedOrder.status,
+      payment_status: savedOrder.paymentStatus,
+      updated_at: savedOrder.updatedAt,
+    };
   }
 
   async countByStatus(statuses?: OrderStatus[]): Promise<number> {
@@ -162,10 +293,18 @@ export class OrdersService {
       subtotal: Number(order.subtotal),
       tax: Number(order.tax),
       discount: Number(order.discount),
+      tip_amount: Number(order.tipAmount),
+      promotion_code: order.promotionCode,
       total_amount: Number(order.totalAmount),
       payment_status: order.paymentStatus,
       payment_method: order.paymentMethod,
       created_at: order.createdAt,
+      table: order.table
+        ? {
+            id: order.table.id,
+            table_number: order.table.tableNumber,
+          }
+        : null,
       items: order.items?.map((item) => ({
         id: item.id,
         menu_item_id: item.menuItemId,
