@@ -53,6 +53,12 @@ export class Order {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   discount: number;
 
+  @Column({ name: 'tip_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  tipAmount: number;
+
+  @Column({ name: 'promotion_code', type: 'text', nullable: true })
+  promotionCode: string | null;
+
   @Column({
     name: 'total_amount',
     type: 'decimal',
@@ -75,6 +81,12 @@ export class Order {
     nullable: true,
   })
   paymentMethod: PaymentMethod | null;
+
+  @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
+  paidAt: Date | null;
+
+  @Column({ name: 'split_bill', type: 'jsonb', nullable: true })
+  splitBill: Record<string, unknown> | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
