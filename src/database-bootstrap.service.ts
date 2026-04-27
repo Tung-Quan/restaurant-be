@@ -7,6 +7,7 @@ export class DatabaseBootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.ensureUsersTable();
+    await this.ensureOrdersTableColumns();
     await this.ensureRelations();
   }
 
@@ -38,6 +39,17 @@ export class DatabaseBootstrapService implements OnApplicationBootstrap {
         END IF;
       END
       $$;
+    `);
+  }
+
+  private async ensureOrdersTableColumns() {
+    await this.dataSource.query(`
+      ALTER TABLE public.orders
+      ADD COLUMN IF NOT EXISTS tip_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS promotion_code TEXT NULL,
+      ADD COLUMN IF NOT EXISTS payment_method TEXT NULL,
+      ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ NULL,
+      ADD COLUMN IF NOT EXISTS split_bill JSONB NULL
     `);
   }
 

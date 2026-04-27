@@ -5,7 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import {
   OutboxEvent,
   OutboxEventStatus,
@@ -23,15 +23,18 @@ export class OutboxEventService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @InjectRepository(OutboxEvent)
     private readonly outboxRepository: Repository<OutboxEvent>,
+    private readonly dataSource: DataSource,
     private readonly eventBus: InternalEventBusService,
   ) {}
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
+    await this.ensureOutboxTable();
+
     this.dispatchTimer = setInterval(() => {
-      void this.dispatchPending();
+      void this.dispatchPendingSafely();
     }, DISPATCH_INTERVAL_MS);
     this.dispatchTimer.unref?.();
-    void this.dispatchPending();
+    void this.dispatchPendingSafely();
   }
 
   onModuleDestroy(): void {
@@ -94,6 +97,39 @@ export class OutboxEventService implements OnModuleInit, OnModuleDestroy {
     for (const event of events) {
       await this.publishEvent(event);
     }
+  }
+
+  private async dispatchPendingSafely(): Promise<void> {
+    try {
+      await this.dispatchPending();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown outbox dispatch error';
+      this.logger.error(`Failed to dispatch pending outbox events: ${message}`);
+    }
+  }
+
+  private async ensureOutboxTable(): Promise<void> {
+    await this.dataSource.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+
+    await this.dataSource.query(`
+      CREATE TABLE IF NOT EXISTS public.outbox_events (
+        id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+        event_name TEXT NOT NULL,
+        payload JSONB NOT NULL,
+        status TEXT NOT NULL DEFAULT '${OutboxEventStatus.PENDING}',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT NULL,
+        published_at TIMESTAMPTZ NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+
+    await this.dataSource.query(`
+      CREATE INDEX IF NOT EXISTS idx_outbox_events_status_created_at
+      ON public.outbox_events (status, created_at)
+    `);
   }
 
   private async publishEvent(event: OutboxEvent): Promise<void> {
