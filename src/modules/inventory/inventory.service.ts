@@ -79,6 +79,16 @@ export class InventoryService {
     };
   }
 
+  async findLowStock() {
+    const items = await this.inventoryRepository
+      .createQueryBuilder('item')
+      .where('item.quantity <= item.minThreshold')
+      .orderBy('item.name', 'ASC')
+      .getMany();
+
+    return items.map((item) => this.toResponse(item));
+  }
+
   async countLowStock(): Promise<number> {
     // Count items where quantity <= min_threshold
     const items = await this.inventoryRepository
@@ -87,5 +97,18 @@ export class InventoryService {
       .getCount();
 
     return items;
+  }
+
+  private toResponse(item: InventoryItem) {
+    return {
+      id: item.id,
+      name: item.name,
+      unit: item.unit,
+      quantity: Number(item.quantity),
+      min_threshold: Number(item.minThreshold),
+      supplier: item.supplier,
+      cost_per_unit: Number(item.costPerUnit),
+      last_restocked_at: item.lastRestockedAt,
+    };
   }
 }

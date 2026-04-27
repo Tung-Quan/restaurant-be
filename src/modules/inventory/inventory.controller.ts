@@ -36,6 +36,12 @@ export class InventoryController {
     return this.inventoryService.findAll(sort);
   }
 
+  @Get('low-stock')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  findLowStock() {
+    return this.inventoryService.findLowStock();
+  }
+
   @Post('items')
   @Roles(Role.ADMIN, Role.MANAGER)
   create(@Body() dto: CreateInventoryItemDto) {
