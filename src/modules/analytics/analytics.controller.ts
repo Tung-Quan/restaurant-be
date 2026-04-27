@@ -5,7 +5,7 @@
  * - Handles HTTP layer for analytics endpoints only.
  */
 
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
@@ -33,5 +33,15 @@ export class AnalyticsController {
   @Roles(Role.ADMIN, Role.MANAGER)
   getDailyRevenue(@Query('days') days?: string) {
     return this.analyticsService.getDailyRevenue(days ? parseInt(days, 10) : 7);
+  }
+
+  @Get('daily-revenue.csv')
+  @Header('Content-Type', 'text/csv')
+  @Header('Content-Disposition', 'attachment; filename="daily-revenue.csv"')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  exportDailyRevenueCsv(@Query('days') days?: string) {
+    return this.analyticsService.exportDailyRevenueCsv(
+      days ? parseInt(days, 10) : 7,
+    );
   }
 }

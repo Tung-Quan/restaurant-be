@@ -75,4 +75,20 @@ export class AnalyticsService {
       revenue: parseFloat(r.revenue),
     }));
   }
+
+  async exportDailyRevenueCsv(days: number = 7): Promise<string> {
+    const rows = await this.getDailyRevenue(days);
+    const csvRows = [
+      'date,revenue',
+      ...rows.map((row) => `${this.escapeCsv(row.date)},${row.revenue}`),
+    ];
+    return csvRows.join('\n');
+  }
+
+  private escapeCsv(value: string): string {
+    if (/[",\n]/.test(value)) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  }
 }
