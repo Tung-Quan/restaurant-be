@@ -1,18 +1,38 @@
 import { BadRequestException } from '@nestjs/common';
+import type { Repository } from 'typeorm';
 import { OrderStatus, PaymentMethod, PaymentStatus } from '../../common/enums';
+import type { BillingRecord } from '../../entities/billing-record.entity';
+import type { Order } from '../../entities/order.entity';
+import type { ActivityLogService } from '../admin/activity-log.service';
 import { BillingService } from './billing.service';
 
 describe('BillingService', () => {
   const buildService = () => {
     const orderRepository = {
       findOne: jest.fn(),
-      save: jest.fn(async (order) => order),
+      save: jest.fn((order: Partial<Order>) => Promise.resolve(order)),
+    };
+    const billingRecordRepository = {
+      create: jest.fn((record: Partial<BillingRecord>) => record),
+      save: jest.fn((record: Partial<BillingRecord>) =>
+        Promise.resolve(record),
+      ),
+      findAndCount: jest.fn(),
     };
     const activityLogService = {
-      log: jest.fn(async () => undefined),
+      log: jest.fn(() => Promise.resolve()),
     };
-    const service = new BillingService(orderRepository as any, activityLogService as any);
-    return { service, orderRepository, activityLogService };
+    const service = new BillingService(
+      orderRepository as unknown as Repository<Order>,
+      billingRecordRepository as unknown as Repository<BillingRecord>,
+      activityLogService as unknown as ActivityLogService,
+    );
+    return {
+      service,
+      orderRepository,
+      billingRecordRepository,
+      activityLogService,
+    };
   };
 
   it('rejects payment amounts below the order total', async () => {
@@ -35,7 +55,8 @@ describe('BillingService', () => {
   });
 
   it('records valid payments and marks the order completed', async () => {
-    const { service, orderRepository } = buildService();
+    const { service, orderRepository, billingRecordRepository } =
+      buildService();
     orderRepository.findOne.mockResolvedValueOnce({
       id: 'order-1',
       subtotal: 20,
@@ -57,6 +78,13 @@ describe('BillingService', () => {
         paymentStatus: PaymentStatus.PAID,
         paymentMethod: PaymentMethod.CARD,
         status: OrderStatus.COMPLETED,
+      }),
+    );
+    expect(billingRecordRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: 'order-1',
+        paymentMethod: PaymentMethod.CARD,
+        totalAmount: 25,
       }),
     );
   });

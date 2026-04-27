@@ -36,6 +36,15 @@ export class BillingController {
     return this.billingService.getBillableOrders(status);
   }
 
+  @Get('records')
+  @Roles(Role.ADMIN, Role.MANAGER, Role.CASHIER)
+  getBillingRecords(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.billingService.getBillingRecords(Number(page), Number(limit));
+  }
+
   @Post('orders/:id/payments')
   @Roles(Role.ADMIN, Role.MANAGER, Role.CASHIER)
   processPayment(

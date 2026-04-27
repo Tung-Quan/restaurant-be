@@ -6,6 +6,7 @@ export { MenuCategory } from './menu-category.entity.js';
 export { MenuItem } from './menu-item.entity.js';
 export { Order } from './order.entity.js';
 export { OrderItem } from './order-item.entity.js';
+export { BillingRecord } from './billing-record.entity.js';
 export { Reservation } from './reservation.entity.js';
 export { InventoryItem } from './inventory-item.entity.js';
 export { ActivityLog } from './activity-log.entity.js';

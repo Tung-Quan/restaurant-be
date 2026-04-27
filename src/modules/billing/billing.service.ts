@@ -20,6 +20,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Order } from '../../entities/order.entity.js';
+import { BillingRecord } from '../../entities/billing-record.entity.js';
 import { OrderStatus, PaymentStatus } from '../../common/enums/index.js';
 import { CreatePaymentDto, SplitBillDto } from './dto/billing.dto.js';
 import { ActivityLogService } from '../admin/activity-log.service.js';
@@ -45,6 +46,8 @@ export class BillingService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(BillingRecord)
+    private readonly billingRecordRepository: Repository<BillingRecord>,
     private readonly activityLogService: ActivityLogService,
   ) {}
 
@@ -54,7 +57,7 @@ export class BillingService {
       : [OrderStatus.READY, OrderStatus.SERVED, OrderStatus.COMPLETED];
 
     const orders = await this.orderRepository.find({
-      where: { status: In(statuses) },
+      where: { status: In(statuses), paymentStatus: PaymentStatus.UNPAID },
       relations: ['items', 'items.menuItem', 'table'],
       order: { createdAt: 'DESC' },
     });
@@ -72,6 +75,12 @@ export class BillingService {
       payment_method: order.paymentMethod,
       split_bill: order.splitBill,
       status: order.status,
+      table: order.table
+        ? {
+            id: order.table.id,
+            table_number: order.table.tableNumber,
+          }
+        : null,
       items: order.items?.map((item) => ({
         id: item.id,
         quantity: item.quantity,
@@ -81,9 +90,60 @@ export class BillingService {
     }));
   }
 
-  async processPayment(orderId: string, dto: CreatePaymentDto, userId?: string) {
+  async getBillingRecords(page = 1, limit = 10) {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
+
+    const [records, total] = await this.billingRecordRepository.findAndCount({
+      relations: ['order', 'order.items', 'order.items.menuItem', 'table'],
+      order: { paidAt: 'DESC' },
+      skip: (safePage - 1) * safeLimit,
+      take: safeLimit,
+    });
+
+    return {
+      records: records.map((record) => ({
+        id: record.id,
+        order_id: record.orderId,
+        table_id: record.tableId,
+        table_number: record.tableNumber,
+        payment_method: record.paymentMethod,
+        amount_paid: Number(record.amountPaid),
+        subtotal: Number(record.subtotal),
+        tax: Number(record.tax),
+        discount: Number(record.discount),
+        tip_amount: Number(record.tipAmount),
+        total_amount: Number(record.totalAmount),
+        promotion_code: record.promotionCode,
+        paid_at: record.paidAt,
+        order: record.order
+          ? {
+              id: record.order.id,
+              status: record.order.status,
+              items: record.order.items?.map((item) => ({
+                id: item.id,
+                quantity: item.quantity,
+                unit_price: Number(item.unitPrice),
+                menu_item_name: item.menuItem?.name || null,
+              })),
+            }
+          : null,
+      })),
+      page: safePage,
+      limit: safeLimit,
+      total,
+      total_pages: Math.max(1, Math.ceil(total / safeLimit)),
+    };
+  }
+
+  async processPayment(
+    orderId: string,
+    dto: CreatePaymentDto,
+    userId?: string,
+  ) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
+      relations: ['table'],
     });
 
     if (!order) {
@@ -95,9 +155,15 @@ export class BillingService {
     }
 
     const tipAmount = this.roundCurrency(dto.tip_amount ?? 0);
-    const promotion = this.calculatePromotionDiscount(order, dto.promotion_code);
+    const promotion = this.calculatePromotionDiscount(
+      order,
+      dto.promotion_code,
+    );
     const payableTotal = this.roundCurrency(
-      Number(order.subtotal) + Number(order.tax) - promotion.discount + tipAmount,
+      Number(order.subtotal) +
+        Number(order.tax) -
+        promotion.discount +
+        tipAmount,
     );
 
     if (dto.amount < payableTotal) {
@@ -114,6 +180,23 @@ export class BillingService {
     order.paidAt = new Date();
 
     const savedOrder = await this.orderRepository.save(order);
+
+    await this.billingRecordRepository.save(
+      this.billingRecordRepository.create({
+        orderId: savedOrder.id,
+        tableId: savedOrder.tableId,
+        tableNumber: order.table?.tableNumber ?? null,
+        paymentMethod: savedOrder.paymentMethod ?? dto.method,
+        amountPaid: dto.amount,
+        subtotal: Number(savedOrder.subtotal),
+        tax: Number(savedOrder.tax),
+        discount: Number(savedOrder.discount),
+        tipAmount: Number(savedOrder.tipAmount),
+        totalAmount: Number(savedOrder.totalAmount),
+        promotionCode: savedOrder.promotionCode,
+        paidAt: savedOrder.paidAt ?? new Date(),
+      }),
+    );
 
     await this.activityLogService.log(
       userId ?? '',
@@ -229,17 +312,23 @@ export class BillingService {
 
       for (const itemId of party.item_ids) {
         if (!orderItemIds.has(itemId)) {
-          throw new BadRequestException(`Item ${itemId} does not belong to order`);
+          throw new BadRequestException(
+            `Item ${itemId} does not belong to order`,
+          );
         }
         if (assignedItemIds.has(itemId)) {
-          throw new BadRequestException(`Item ${itemId} is assigned more than once`);
+          throw new BadRequestException(
+            `Item ${itemId} is assigned more than once`,
+          );
         }
         assignedItemIds.add(itemId);
       }
     }
 
     if (assignedItemIds.size !== orderItemIds.size) {
-      throw new BadRequestException('Every order item must be assigned exactly once');
+      throw new BadRequestException(
+        'Every order item must be assigned exactly once',
+      );
     }
 
     const orderSubtotal = Number(order.subtotal);
@@ -306,7 +395,10 @@ export class BillingService {
     throw new BadRequestException('Unsupported promotion code');
   }
 
-  private adjustRounding(shares: SplitBillShare[], expectedTotal: number): void {
+  private adjustRounding(
+    shares: SplitBillShare[],
+    expectedTotal: number,
+  ): void {
     if (shares.length === 0) return;
 
     const currentTotal = shares.reduce(
@@ -317,7 +409,9 @@ export class BillingService {
 
     if (delta !== 0) {
       const lastShare = shares[shares.length - 1];
-      lastShare.total_amount = this.roundCurrency(lastShare.total_amount + delta);
+      lastShare.total_amount = this.roundCurrency(
+        lastShare.total_amount + delta,
+      );
     }
   }
 }

@@ -10,11 +10,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BillingController } from './billing.controller.js';
 import { BillingService } from './billing.service.js';
 import { Order } from '../../entities/order.entity.js';
+import { BillingRecord } from '../../entities/billing-record.entity.js';
 import { ActivityLog } from '../../entities/activity-log.entity.js';
 import { ActivityLogService } from '../admin/activity-log.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, ActivityLog])],
+  imports: [TypeOrmModule.forFeature([Order, BillingRecord, ActivityLog])],
   controllers: [BillingController],
   providers: [BillingService, ActivityLogService],
   exports: [BillingService],
