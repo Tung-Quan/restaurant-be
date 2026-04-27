@@ -35,6 +35,12 @@ export class KitchenController {
     return this.kitchenService.getKitchenOrders(status);
   }
 
+  @Get('kitchen/notifications')
+  @Roles(Role.ADMIN, Role.MANAGER, Role.CHEF)
+  getRecentNotifications() {
+    return this.kitchenService.getRecentNotifications();
+  }
+
   @Patch('order-items/:id/status')
   @Roles(Role.ADMIN, Role.MANAGER, Role.CHEF)
   updateOrderItemStatus(
