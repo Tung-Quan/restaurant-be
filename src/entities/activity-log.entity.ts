@@ -21,7 +21,7 @@ export class ActivityLog {
   id: string;
 
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
-  userId: string;
+  userId: string | null;
 
   @Column()
   action: string;

@@ -25,14 +25,14 @@ export class ActivityLogService {
   ) {}
 
   async log(
-    userId: string,
+    userId: string | null | undefined,
     action: string,
     entityType: string,
     entityId?: string,
     details?: Record<string, any>,
   ): Promise<ActivityLog> {
     const log = this.activityLogRepository.create({
-      userId,
+      userId: userId || null,
       action,
       entityType,
       entityId: entityId || null,
